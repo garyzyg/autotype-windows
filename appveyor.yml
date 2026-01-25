@@ -1,0 +1,22 @@
+version: '{branch}-{build}'
+skip_non_tags: false
+platform:
+- x86
+- x64
+init:
+- cmd: IF %APPVEYOR_REPO_TAG%==true appveyor UpdateBuild -Version %APPVEYOR_REPO_TAG_NAME%-%APPVEYOR_BUILD_NUMBER%
+build_script:
+- cmd: build.bat
+after_build:
+- cmd: 7z a autotype-%Platform%.zip *.exe
+artifacts:
+- path: '*.zip'
+  name: autotype
+deploy:
+- provider: GitHub
+  tag: $(APPVEYOR_REPO_TAG_NAME)
+  auth_token:
+    secure: GB3/If871VL553U1Ep3b+S6QMxbs7Yv5auDcZbSlRYXlJZCY58VHJH4aYXwWzqHT
+  artifact: /.*\.zip/
+  on:
+    APPVEYOR_REPO_TAG: true
