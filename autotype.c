@@ -24,14 +24,13 @@ TCHAR g_szHelpText[] = _T("1. Copy text\r\n2. Ctrl+Alt+V to type\r\n3. Esc to in
 int g_nIntervalMs = 15;
 BOOL g_bIsEnabled = TRUE;
 volatile BOOL g_bIsTyping = FALSE;
-NOTIFYICONDATA g_nidTray;
+NOTIFYICONDATA g_nidTray = {0};
 HWND g_hwndMain, g_hwndConfig, g_hwndHelp, g_hwndUpdown;
 HANDLE g_hMutex;
 
 void SendKey(wchar_t wch) {
-    INPUT in[2];
+    INPUT in[2] = {0};
     SHORT ks;
-    memset(in, 0, sizeof(in));
     ks = VkKeyScanW(wch);
     if (ks != -1) {
         BYTE bSh = HIBYTE(ks);
@@ -121,7 +120,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT m, WPARAM w, LPARAM l) {
                         size_t sz = (wcslen(pc) + 1) * sizeof(wchar_t);
                         wchar_t* pBuf = (wchar_t*)GlobalAlloc(GPTR, sz);
                         if (pBuf) {
-                            memcpy(pBuf, pc, sz);
+                            CopyMemory(pBuf, pc, sz);
                             g_bIsTyping = TRUE;
                             CreateThread(NULL, 0, TypeThreadProc, pBuf, 0, NULL);
                         }
@@ -188,7 +187,6 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
     RegisterHotKey(g_hwndMain, HK_ID, MOD_CONTROL | MOD_ALT, 0x56);
     hi = ExtractIcon(hI, _T("pifmgr.dll"), 12);
     
-    memset(&g_nidTray, 0, sizeof(g_nidTray));
     g_nidTray.cbSize = sizeof(NOTIFYICONDATA);
     g_nidTray.hWnd = g_hwndMain;
     g_nidTray.uID = 1;
