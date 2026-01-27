@@ -3,8 +3,6 @@
 #include <shellapi.h>
 #include <commctrl.h>
 #include <tchar.h>
-#include <stdlib.h>
-#include <time.h>
 
 #ifndef KEYEVENTF_UNICODE
 #define KEYEVENTF_UNICODE 0x0004
@@ -74,7 +72,7 @@ DWORD WINAPI TypeThreadProc(LPVOID lpParam) {
         if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) break;
         if (*cur != L'\r') {
             SendKey(*cur);
-            if (g_nIntervalMs > 0) Sleep(g_nIntervalMs + (rand() % 8));
+            if (g_nIntervalMs > 0) Sleep(g_nIntervalMs + (GetTickCount() & 7));
         }
         cur++;
     }
@@ -164,7 +162,6 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
     g_hMutex = CreateMutex(NULL, TRUE, g_szAppName);
     if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
 
-    srand((unsigned int)time(NULL));
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hI;
     wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
