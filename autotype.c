@@ -120,9 +120,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT m, WPARAM w, LPARAM l) {
                         size_t sz = (wcslen(pc) + 1) * sizeof(wchar_t);
                         wchar_t* pBuf = (wchar_t*)GlobalAlloc(GPTR, sz);
                         if (pBuf) {
+                            HANDLE hThread;
                             CopyMemory(pBuf, pc, sz);
                             g_bIsTyping = TRUE;
-                            CreateThread(NULL, 0, TypeThreadProc, pBuf, 0, NULL);
+                            hThread = CreateThread(NULL, 0, TypeThreadProc, pBuf, 0, NULL);
+                            if (hThread) CloseHandle(hThread);
                         }
                         GlobalUnlock(hd);
                     }
@@ -144,7 +146,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT m, WPARAM w, LPARAM l) {
         ShowWindow(hWnd, SW_HIDE);
         return 0;
     case WM_DESTROY:
-        if (hWnd == g_hwndMain) { Shell_NotifyIcon(NIM_DELETE, &g_nidTray); PostQuitMessage(0); }
+        if (hWnd == g_hwndMain) {
+            Shell_NotifyIcon(NIM_DELETE, &g_nidTray);
+            if (g_nidTray.hIcon) DestroyIcon(g_nidTray.hIcon);
+            UnregisterHotKey(hWnd, HK_ID);
+            PostQuitMessage(0);
+        }
         break;
     default: return DefWindowProc(hWnd, m, w, l);
     }
@@ -155,7 +162,6 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
     WNDCLASS wc = {0};
     INITCOMMONCONTROLSEX ic;
     HWND he;
-    HICON hi;
     MSG msg;
 
     g_hMutex = CreateMutex(NULL, TRUE, g_szAppName);
@@ -185,14 +191,14 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
     CreateWindow(g_szStatic, g_szHelpText, WS_VISIBLE | WS_CHILD, 15, 15, 190, 60, g_hwndHelp, NULL, hI, NULL);
 
     RegisterHotKey(g_hwndMain, HK_ID, MOD_CONTROL | MOD_ALT, 0x56);
-    hi = ExtractIcon(hI, _T("pifmgr.dll"), 12);
     
     g_nidTray.cbSize = sizeof(NOTIFYICONDATA);
     g_nidTray.hWnd = g_hwndMain;
     g_nidTray.uID = 1;
     g_nidTray.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     g_nidTray.uCallbackMessage = WM_TRAY;
-    g_nidTray.hIcon = hi ? hi : LoadIcon(NULL, IDI_APPLICATION);
+    g_nidTray.hIcon = ExtractIcon(hI, _T("pifmgr.dll"), 12);
+    if (!g_nidTray.hIcon) g_nidTray.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     _tcscpy(g_nidTray.szTip, g_szAppName);
     Shell_NotifyIcon(NIM_ADD, &g_nidTray);
 
