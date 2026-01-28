@@ -3,6 +3,7 @@
 #include <shellapi.h>
 #include <commctrl.h>
 #include <tchar.h>
+#include <strsafe.h>
 
 #ifndef KEYEVENTF_UNICODE
 #define KEYEVENTF_UNICODE 0x0004
@@ -100,8 +101,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT m, WPARAM w, LPARAM l) {
             TCHAR buf[32];
             GetCursorPos(&pt);
             AppendMenu(hm, MF_STRING | (g_bIsEnabled ? MF_CHECKED : 0), ID_TOGGLE, _T("Enabled"));
-            wsprintf(buf, _T("Interval: %d ms"), g_nIntervalMs);
-            AppendMenu(hm, MF_STRING, ID_CONFIG, buf);
+            if (SUCCEEDED(StringCchPrintf(buf, ARRAYSIZE(buf), _T("Interval: %d ms"), g_nIntervalMs))) {
+                AppendMenu(hm, MF_STRING, ID_CONFIG, buf);
+            }
             AppendMenu(hm, MF_SEPARATOR, 0, 0);
             AppendMenu(hm, MF_STRING, ID_HELP, _T("Help"));
             AppendMenu(hm, MF_STRING, ID_EXIT, _T("Exit"));
@@ -199,7 +201,7 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
     g_nidTray.uCallbackMessage = WM_TRAY;
     g_nidTray.hIcon = ExtractIcon(hI, _T("pifmgr.dll"), 12);
     if (!g_nidTray.hIcon) g_nidTray.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    _tcscpy(g_nidTray.szTip, g_szAppName);
+    StringCchCopy(g_nidTray.szTip, ARRAYSIZE(g_nidTray.szTip), g_szAppName);
     Shell_NotifyIcon(NIM_ADD, &g_nidTray);
 
     while (GetMessage(&msg, NULL, 0, 0)) { TranslateMessage(&msg); DispatchMessage(&msg); }
