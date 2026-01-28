@@ -16,12 +16,6 @@
 #define ID_HELP   2003
 #define ID_EXIT   2004
 
-TCHAR g_szAppName[] = _T("AutoType");
-TCHAR g_szStatic[] = _T("STATIC");
-TCHAR g_szEdit[] = _T("EDIT");
-TCHAR g_szLabelSpeed[] = _T("Interval (ms):");
-TCHAR g_szHelpText[] = _T("1. Copy text\r\n2. Ctrl+Alt+V to type\r\n3. Esc to interrupt");
-
 int g_nIntervalMs = 15;
 BOOL g_bIsEnabled = TRUE;
 volatile BOOL g_bIsTyping = FALSE;
@@ -161,36 +155,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT m, WPARAM w, LPARAM l) {
 }
 
 int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
+    static const TCHAR szAppName[] = _T("AutoType");
+    static const TCHAR szStatic[] = _T("STATIC");
     WNDCLASS wc = {0};
     INITCOMMONCONTROLSEX ic;
     HWND he;
     MSG msg;
 
-    g_hMutex = CreateMutex(NULL, TRUE, g_szAppName);
+    g_hMutex = CreateMutex(NULL, TRUE, szAppName);
     if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
 
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hI;
     wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
-    wc.lpszClassName = g_szAppName;
+    wc.lpszClassName = szAppName;
     RegisterClass(&wc);
 
-    g_hwndMain = CreateWindowEx(0, g_szAppName, g_szAppName, 0, 0, 0, 0, 0, NULL, NULL, hI, NULL);
-    g_hwndConfig = CreateWindowEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, g_szAppName, g_szAppName, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, 0, 0, 0, 0, NULL, NULL, hI, NULL);
-    g_hwndHelp = CreateWindowEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, g_szAppName, g_szAppName, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, 0, 0, 0, 0, NULL, NULL, hI, NULL);
+    g_hwndMain = CreateWindowEx(0, szAppName, szAppName, 0, 0, 0, 0, 0, NULL, NULL, hI, NULL);
+    g_hwndConfig = CreateWindowEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, szAppName, szAppName, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, 0, 0, 0, 0, NULL, NULL, hI, NULL);
+    g_hwndHelp = CreateWindowEx(WS_EX_TOPMOST | WS_EX_TOOLWINDOW, szAppName, szAppName, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, 0, 0, 0, 0, NULL, NULL, hI, NULL);
 
     ic.dwSize = sizeof(ic);
     ic.dwICC = ICC_UPDOWN_CLASS;
     InitCommonControlsEx(&ic);
 
-    CreateWindow(g_szStatic, g_szLabelSpeed, WS_VISIBLE | WS_CHILD, 15, 22, 90, 20, g_hwndConfig, NULL, hI, NULL);
-    he = CreateWindowEx(WS_EX_CLIENTEDGE, g_szEdit, NULL, WS_VISIBLE | WS_CHILD | ES_NUMBER | ES_RIGHT, 110, 20, 55, 25, g_hwndConfig, NULL, hI, NULL);
+    CreateWindow(szStatic, _T("Interval (ms):"), WS_VISIBLE | WS_CHILD, 15, 22, 90, 20, g_hwndConfig, NULL, hI, NULL);
+    he = CreateWindowEx(WS_EX_CLIENTEDGE, _T("EDIT"), NULL, WS_VISIBLE | WS_CHILD | ES_NUMBER | ES_RIGHT, 110, 20, 55, 25, g_hwndConfig, NULL, hI, NULL);
     g_hwndUpdown = CreateWindowEx(0, UPDOWN_CLASS, NULL, WS_VISIBLE | WS_CHILD | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_ARROWKEYS | UDS_NOTHOUSANDS, 0, 0, 0, 0, g_hwndConfig, NULL, hI, NULL);
     SendMessage(g_hwndUpdown, UDM_SETBUDDY, (WPARAM)he, 0);
     SendMessage(g_hwndUpdown, UDM_SETRANGE, 0, MAKELPARAM(9999, 0));
     SendMessage(g_hwndUpdown, UDM_SETPOS, 0, (LPARAM)g_nIntervalMs);
 
-    CreateWindow(g_szStatic, g_szHelpText, WS_VISIBLE | WS_CHILD, 15, 15, 190, 60, g_hwndHelp, NULL, hI, NULL);
+    CreateWindow(szStatic, _T("1. Copy text\r\n2. Ctrl+Alt+V to type\r\n3. Esc to interrupt"), WS_VISIBLE | WS_CHILD, 15, 15, 190, 60, g_hwndHelp, NULL, hI, NULL);
 
     RegisterHotKey(g_hwndMain, HK_ID, MOD_CONTROL | MOD_ALT, 0x56);
     
@@ -201,7 +197,7 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
     g_nidTray.uCallbackMessage = WM_TRAY;
     g_nidTray.hIcon = ExtractIcon(hI, _T("pifmgr.dll"), 12);
     if (!g_nidTray.hIcon) g_nidTray.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    StringCchCopy(g_nidTray.szTip, ARRAYSIZE(g_nidTray.szTip), g_szAppName);
+    StringCchCopy(g_nidTray.szTip, ARRAYSIZE(g_nidTray.szTip), szAppName);
     Shell_NotifyIcon(NIM_ADD, &g_nidTray);
 
     while (GetMessage(&msg, NULL, 0, 0)) { TranslateMessage(&msg); DispatchMessage(&msg); }
