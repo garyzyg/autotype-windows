@@ -24,37 +24,47 @@ HWND g_hwndMain, g_hwndConfig, g_hwndHelp, g_hwndUpdown;
 HANDLE g_hMutex;
 
 void SendKey(wchar_t wch) {
-    INPUT in[2] = {0};
-    SHORT ks;
-    ks = VkKeyScanW(wch);
+    INPUT in[4] = {0};
+    SHORT ks = VkKeyScanW(wch);
+    UINT count = 0;
+    UINT i = 0;
+
+    for (i = 0; i < ARRAYSIZE(in); i++) {
+        in[i].type = INPUT_KEYBOARD;
+    }
+
     if (ks != -1) {
         BYTE bSh = HIBYTE(ks);
         WORD wSc = (WORD)MapVirtualKey(LOBYTE(ks), 0);
+
         if (bSh & 1) {
-            INPUT si = {0};
-            si.type = INPUT_KEYBOARD;
-            si.ki.wScan = (WORD)MapVirtualKey(VK_SHIFT, 0);
-            si.ki.dwFlags = KEYEVENTF_SCANCODE;
-            SendInput(1, &si, sizeof(INPUT));
+            in[count].ki.wScan = (WORD)MapVirtualKey(VK_SHIFT, 0);
+            in[count].ki.dwFlags = KEYEVENTF_SCANCODE;
+            count++;
         }
-        in[0].type = in[1].type = INPUT_KEYBOARD;
-        in[0].ki.wScan = in[1].ki.wScan = wSc;
-        in[0].ki.dwFlags = KEYEVENTF_SCANCODE;
-        in[1].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-        SendInput(2, in, sizeof(INPUT));
+
+        in[count].ki.wScan = wSc;
+        in[count].ki.dwFlags = KEYEVENTF_SCANCODE;
+        count++;
+
+        in[count].ki.wScan = wSc;
+        in[count].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+        count++;
+
         if (bSh & 1) {
-            INPUT si = {0};
-            si.type = INPUT_KEYBOARD;
-            si.ki.wScan = (WORD)MapVirtualKey(VK_SHIFT, 0);
-            si.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-            SendInput(1, &si, sizeof(INPUT));
+            in[count].ki.wScan = (WORD)MapVirtualKey(VK_SHIFT, 0);
+            in[count].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
+            count++;
         }
     } else {
-        in[0].type = in[1].type = INPUT_KEYBOARD;
-        in[0].ki.wScan = in[1].ki.wScan = wch;
+        in[0].ki.wScan = in[1].ki.wScan = (WORD)wch;
         in[0].ki.dwFlags = KEYEVENTF_UNICODE;
         in[1].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-        SendInput(2, in, sizeof(INPUT));
+        count = 2;
+    }
+
+    if (count > 0) {
+        SendInput(count, in, sizeof(INPUT));
     }
 }
 
