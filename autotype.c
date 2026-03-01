@@ -74,10 +74,15 @@ DWORD WINAPI TypeThreadProc(LPVOID lpParam) {
     while ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || (GetAsyncKeyState(VK_MENU) & 0x8000)) Sleep(10);
     while (*cur && g_bIsTyping) {
         if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) break;
-        if (*cur != L'\r') {
+        if (*cur == L'\r') {
+            if (*(cur + 1) == L'\n') cur++;
+            SendKey(L'\r');
+        } else if (*cur == L'\n') {
+            SendKey(L'\r');
+        } else {
             SendKey(*cur);
-            if (g_nIntervalMs > 0) Sleep(g_nIntervalMs + (GetTickCount() & 7));
         }
+        if (g_nIntervalMs > 0) Sleep(g_nIntervalMs + (GetTickCount() & 7));
         cur++;
     }
     GlobalFree(p);
