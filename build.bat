@@ -21,3 +21,5 @@ link.exe -nologo						^
 	*.obj							^
 	/NODEFAULTLIB /ENTRY:_start /SUBSYSTEM:WINDOWS		^
 	kernel32.lib user32.lib shell32.lib comctl32.lib	^
+	/MERGE:.rdata=.text /MERGE:.data=.text			^
+	/ALIGN:32						^
