@@ -19,4 +19,5 @@ link.exe -nologo						^
 	/LTCG							^
 	/OUT:%1							^
 	*.obj							^
-	user32.lib shell32.lib comctl32.lib			^				
+	/NODEFAULTLIB /ENTRY:_start /SUBSYSTEM:WINDOWS		^
+	kernel32.lib user32.lib shell32.lib comctl32.lib	^

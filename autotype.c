@@ -3,7 +3,6 @@
 #include <shellapi.h>
 #include <commctrl.h>
 #include <tchar.h>
-#include <strsafe.h>
 
 #ifndef KEYEVENTF_UNICODE
 #define KEYEVENTF_UNICODE 0x0004
@@ -16,18 +15,28 @@
 #define ID_HELP   2003
 #define ID_EXIT   2004
 
+#ifdef RtlMoveMemory
+#undef RtlMoveMemory
+WINBASEAPI VOID WINAPI RtlMoveMemory(PVOID Destination, const VOID* Source, SIZE_T Length);
+#endif
+
+#ifdef RtlZeroMemory
+#undef RtlZeroMemory
+WINBASEAPI VOID WINAPI RtlZeroMemory(PVOID Destination, SIZE_T Length);
+#endif
+
 int g_nIntervalMs = 15;
 BOOL g_bIsEnabled = TRUE;
 volatile BOOL g_bIsTyping = FALSE;
-NOTIFYICONDATA g_nidTray = {0};
+NOTIFYICONDATA g_nidTray;
 HWND g_hwndMain, g_hwndConfig, g_hwndHelp, g_hwndUpdown;
-HANDLE g_hMutex;
 
 void SendKey(wchar_t wch) {
-    INPUT in[4] = {0};
     SHORT ks = VkKeyScanW(wch);
     UINT count = 0;
     UINT i = 0;
+    INPUT in[4];
+    RtlZeroMemory(in, sizeof(in));
 
     for (i = 0; i < ARRAYSIZE(in); i++) {
         in[i].type = INPUT_KEYBOARD;
@@ -110,9 +119,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT m, WPARAM w, LPARAM l) {
             TCHAR buf[32];
             GetCursorPos(&pt);
             AppendMenu(hm, MF_STRING | (g_bIsEnabled ? MF_CHECKED : 0), ID_TOGGLE, _T("Enabled"));
-            if (SUCCEEDED(StringCchPrintf(buf, ARRAYSIZE(buf), _T("Interval: %d ms"), g_nIntervalMs))) {
-                AppendMenu(hm, MF_STRING, ID_CONFIG, buf);
-            }
+            wsprintf(buf, _T("Interval: %d ms"), g_nIntervalMs);
+            AppendMenu(hm, MF_STRING, ID_CONFIG, buf);
             AppendMenu(hm, MF_SEPARATOR, 0, 0);
             AppendMenu(hm, MF_STRING, ID_HELP, _T("Help"));
             AppendMenu(hm, MF_STRING, ID_EXIT, _T("Exit"));
@@ -128,11 +136,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT m, WPARAM w, LPARAM l) {
                 if (hd) {
                     wchar_t* pc = (wchar_t*)GlobalLock(hd);
                     if (pc) {
-                        size_t sz = (wcslen(pc) + 1) * sizeof(wchar_t);
+                        size_t sz = (lstrlenW(pc) + 1) * sizeof(wchar_t);
                         wchar_t* pBuf = (wchar_t*)GlobalAlloc(GPTR, sz);
                         if (pBuf) {
                             HANDLE hThread;
-                            CopyMemory(pBuf, pc, sz);
+                            RtlMoveMemory(pBuf, pc, sz);
                             g_bIsTyping = TRUE;
                             hThread = CreateThread(NULL, 0, TypeThreadProc, pBuf, 0, NULL);
                             if (hThread) CloseHandle(hThread);
@@ -169,16 +177,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT m, WPARAM w, LPARAM l) {
     return 0;
 }
 
-int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
+void _start() {
+    HINSTANCE hI = GetModuleHandle(NULL);
     static const TCHAR szAppName[] = _T("AutoType");
     static const TCHAR szStatic[] = _T("STATIC");
-    WNDCLASS wc = {0};
     INITCOMMONCONTROLSEX ic;
     HWND he;
     MSG msg;
+    WNDCLASS wc;
+    RtlZeroMemory(&wc, sizeof(wc));
+    RtlZeroMemory(&g_nidTray, sizeof(g_nidTray));
 
-    g_hMutex = CreateMutex(NULL, TRUE, szAppName);
-    if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
+    CreateMutex(NULL, TRUE, szAppName);
+    if (GetLastError() == ERROR_ALREADY_EXISTS) ExitProcess(0);
 
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hI;
@@ -212,10 +223,12 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
     g_nidTray.uCallbackMessage = WM_TRAY;
     g_nidTray.hIcon = ExtractIcon(hI, _T("pifmgr.dll"), 12);
     if (!g_nidTray.hIcon) g_nidTray.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    StringCchCopy(g_nidTray.szTip, ARRAYSIZE(g_nidTray.szTip), szAppName);
+    lstrcpyn(g_nidTray.szTip, szAppName, ARRAYSIZE(g_nidTray.szTip));
     Shell_NotifyIcon(NIM_ADD, &g_nidTray);
 
-    while (GetMessage(&msg, NULL, 0, 0)) { TranslateMessage(&msg); DispatchMessage(&msg); }
-    if (g_hMutex) { ReleaseMutex(g_hMutex); CloseHandle(g_hMutex); }
-    return (int)msg.wParam;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    ExitProcess(0);
 }
